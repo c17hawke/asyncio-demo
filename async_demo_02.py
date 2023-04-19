@@ -1,15 +1,16 @@
 """
-Demo for sequential way of downloading images from
+Demo for async way of downloading images from
 pexels.com
 """
+import asyncio
+import aiohttp
 import time
 import os
 from pathlib import Path
 from typing import List, Optional
-import requests
 
 
-def download_file(photo_id: str, dirname: str) -> None:
+async def download_file(session: aiohttp.ClientSession, photo_id: str, dirname: str) -> None:
     """download file from Pexels
 
     Args:
@@ -24,17 +25,17 @@ def download_file(photo_id: str, dirname: str) -> None:
 
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
 
-        response = requests.get(url, headers=headers, timeout=10)
+        async with session.get(url, headers=headers) as response:
+            with open(filepath, "wb") as f:
+                async for chunk in response.content.iter_chunked(1024):
+                    f.write(chunk)
 
-        if response.status_code == 200:
-            with open(filepath, "wb") as img_file:
-                img_file.write(response.content)
-            print(f"Downloaded: {photo_id}.jpeg")
+        print(f"Downloaded: {photo_id}.jpeg")
 
     except Exception as exe:
         print(exe)
 
-def download_all(list_photo_ids: List[str], dirname: Optional[str]="images_01") -> None:
+async def download_all(list_photo_ids: List[str], dirname: Optional[str]="images_02") -> None:
     """download all photos from the given list
 
     Args:
@@ -42,9 +43,10 @@ def download_all(list_photo_ids: List[str], dirname: Optional[str]="images_01") 
         dirname (str, optional): directory where photos to be downloaded. Defaults to "images_01".
     """
     os.makedirs(dirname, exist_ok=True)
-    for photo_id in list_photo_ids:
-        download_file(photo_id=photo_id, dirname=dirname)
-        print(f"----\n\n")
+    async with aiohttp.ClientSession() as session:
+        for photo_id in list_photo_ids:
+            await download_file(session=session, photo_id=photo_id, dirname=dirname)
+            print(f"----\n\n")
 
 
 if __name__ == '__main__':
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     print(list_photo_ids)
     # call download all function
     start_time = time.time()
-    download_all(list_photo_ids=list_photo_ids)
+    asyncio.run(download_all(list_photo_ids=list_photo_ids))
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Elapsed time: {elapsed_time:.4f} seconds")
