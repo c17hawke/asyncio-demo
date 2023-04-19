@@ -14,6 +14,7 @@ async def download_file(session: aiohttp.ClientSession, photo_id: str, dirname: 
     """download file from Pexels
 
     Args:
+        session (aiohttp.ClientSession): aiohttp session
         photo_id (str): id of the photo to download
         dirname (str): directory where photos to be downloaded
     """
